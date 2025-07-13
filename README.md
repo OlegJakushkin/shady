@@ -7,6 +7,15 @@ development and hacking.
 
 
 ## Usage
+### Docker (simplified executable)
+Runs in serverless docker based mode:
+```bash
+# docker build -t shadertoy-render .
+# docker run --rm -v "$(pwd)":/work    -e RES=2560x1440 -e FPS=60    shadertoy-render shader.glsl audio.mp3 out.mp4
+```
+will put out.mp4 into a folder from where you started it and will take in from that folder shader.glsl audio.mp3 files. It is slowish (on M4 Max 1.8 fps for the command above and [this](https://www.shadertoy.com/view/W3VGWW) shader)
+Feel free to change `render_shader.sh` for more complicated input configurations.
+
 ### Installation
 ```sh
 go install github.com/polyfloyd/shady/cmd/shady@latest

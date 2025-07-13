@@ -2,40 +2,64 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
   workflow_call:
 
 jobs:
-
   test:
     runs-on: ubuntu-latest
 
+    ## All the env vars same as set in the Dockerfile so Mesa runs head-less
     env:
       GOPATH: /home/runner/go
+      LIBGL_DRIVERS_PATH: /usr/lib/x86_64-linux-gnu/dri
+      GALLIUM_DRIVER: llvmpipe
+      LIBGL_ALWAYS_SOFTWARE: "true"
+      EGL_PLATFORM: surfaceless
+      MESA_GL_VERSION_OVERRIDE: "4.6"
 
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-go@v5
-      with:
-        go-version: stable
+      # ✨ Source code & Go toolchain
+      - uses: actions/checkout@v4
 
-    - run: go get -u golang.org/x/lint/golint
-    - run: sudo apt install libegl1-mesa-dev libgl1-mesa-dev libglfw3-dev
-    - run: sudo apt install libxcursor-dev libxinerama-dev libxi-dev libxxf86vm-dev
-    - run: sudo apt install libusb-1.0-0-dev libfreenect-dev
-    - run: go mod download
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
 
-    - name: Check go mod
-      run: |
-        go mod tidy
-        git diff --exit-code go.mod
-        git diff --exit-code go.sum
+      # ✨ System packages
+      - name: Install build-time & runtime deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git curl ca-certificates build-essential python3 pkg-config \
+            ffmpeg \
+            libegl1-mesa libegl1-mesa-dev libgl1-mesa-dev libgl1-mesa-dri mesa-utils \
+            libglfw3-dev \
+            libx11-dev libxcursor-dev libxi-dev \
+            libxinerama-dev libxrandr-dev libxxf86vm-dev \
+            libusb-1.0-0-dev libfreenect-dev          # still needed for the `kinect` build tag
 
-    - run: gofmt -s -d .
-    - run: $GOPATH/bin/golint -min_confidence 0.3 $(go list ./...)
-    - run: go build -tags kinect ./cmd/shady/
-    - run: go test -test.v -race -cover ./...
+      # ✨ Go dependencies & static checks
+      - name: Download Go modules
+        run: go mod download
+
+      - name: Ensure go.mod / go.sum are tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod
+          git diff --exit-code go.sum
+
+      - name: Lint & format
+        run: |
+          go install golang.org/x/lint/golint@latest
+          gofmt -s -d .
+          $GOPATH/bin/golint -min_confidence 0.3 $(go list ./...)
+
+      # ✨ Build & test exactly like your current CI
+      - name: Build
+        run: go build -tags kinect ./cmd/shady/
+
+      - name: Test
+        run: go test -v -race -cover ./...
