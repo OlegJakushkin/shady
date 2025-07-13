@@ -2,14 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: ["**"]
   pull_request:
-    branches: [ main ]
+    branches: ["**"]
   workflow_call:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     ## All the env vars same as set in the Dockerfile so Mesa runs head-less
     env:
@@ -35,7 +35,9 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             git curl ca-certificates build-essential python3 pkg-config \
             ffmpeg \
-            libegl1-mesa libegl1-mesa-dev libgl1-mesa-dev libgl1-mesa-dri mesa-utils \
+            libegl1            libegl1-mesa-dev \
+            libgl1-mesa-dev    libglx-mesa0      libgl1-mesa-dri \
+            mesa-utils \
             libglfw3-dev \
             libx11-dev libxcursor-dev libxi-dev \
             libxinerama-dev libxrandr-dev libxxf86vm-dev \
