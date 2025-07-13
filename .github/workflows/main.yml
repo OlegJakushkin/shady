@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: ["**"] # run for every branch
   pull_request:
     branches: ["**"]
   workflow_call:
@@ -11,7 +11,7 @@ jobs:
   test:
     runs-on: ubuntu-22.04
 
-    ## All the env vars same as set in the Dockerfile so Mesa runs head-less
+    # Same Mesa-headless settings as in the Dockerfile
     env:
       GOPATH: /home/runner/go
       LIBGL_DRIVERS_PATH: /usr/lib/x86_64-linux-gnu/dri
@@ -35,13 +35,12 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             git curl ca-certificates build-essential python3 pkg-config \
             ffmpeg \
-            libegl1            libegl1-mesa-dev \
-            libgl1-mesa-dev    libglx-mesa0      libgl1-mesa-dri \
-            mesa-utils \
+            libegl1 libegl1-mesa-dev libgl1-mesa-dev libglx-mesa0 \
+            libgl1-mesa-dri mesa-utils \
             libglfw3-dev \
             libx11-dev libxcursor-dev libxi-dev \
             libxinerama-dev libxrandr-dev libxxf86vm-dev \
-            libusb-1.0-0-dev libfreenect-dev          # still needed for the `kinect` build tag
+            libusb-1.0-0-dev libfreenect-dev  # still needed for “kinect” tag
 
       # ✨ Go dependencies & static checks
       - name: Download Go modules
@@ -57,9 +56,9 @@ jobs:
         run: |
           go install golang.org/x/lint/golint@latest
           gofmt -s -d .
-          $GOPATH/bin/golint -min_confidence 0.3 $(go list ./...)
+          "$GOPATH/bin/golint" -min_confidence 0.3 $(go list ./...)
 
-      # ✨ Build & test exactly like your current CI
+      # ✨ Build & test
       - name: Build
         run: go build -tags kinect ./cmd/shady/
 

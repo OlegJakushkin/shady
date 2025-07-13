@@ -1,0 +1,50 @@
+############################################
+# shadertoy-render: run unit-tests at build
+############################################
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 1️⃣  Core build & runtime packages (Mesa head-less + dev libs)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git curl ca-certificates build-essential python3 pkg-config \
+        ffmpeg \
+        libegl1-mesa libegl1-mesa-dev libgl1-mesa-dev libgl1-mesa-dri mesa-utils \
+        libglfw3-dev \
+        libx11-dev libxcursor-dev libxi-dev \
+        libxinerama-dev libxrandr-dev libxxf86vm-dev \
+        libusb-1.0-0-dev libfreenect-dev      \
+ && rm -rf /var/lib/apt/lists/*
+
+# 2️⃣  Go toolchain (latest stable at build time, or pin via --build-arg)
+ARG GO_VERSION=1.24.4
+RUN curl -fsSL https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz | tar -C /usr/local -xz
+ENV GOPATH=/go
+ENV PATH=/usr/local/go/bin:${GOPATH}/bin:$PATH
+
+# 3️⃣  Copy source and resolve modules up-front (cache-friendly)
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+
+# 4️⃣  Mesa software rasteriser – same flags as CI
+ENV LIBGL_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri \
+    GALLIUM_DRIVER=llvmpipe \
+    LIBGL_ALWAYS_SOFTWARE=true \
+    EGL_PLATFORM=surfaceless \
+    MESA_GL_VERSION_OVERRIDE=4.6
+
+# 5️⃣  🧪  Run the test-suite; build aborts if anything fails
+RUN go test -v -race -cover -tags kinect ./...
+
+# 6️⃣  Build & install the CLI executable
+RUN go install -tags kinect ./cmd/shady
+
+# 7️⃣  Helper wrapper (kept from your original image)
+COPY render_shader.sh /usr/local/bin/render_shader
+RUN chmod +x /usr/local/bin/render_shader
+
+# 8️⃣  Final runtime setup
+WORKDIR /work
+ENTRYPOINT ["render_shader"]
