@@ -142,7 +142,7 @@ func (err CompileError) PrettyPrint(out io.Writer) {
 }
 
 func (err CompileError) markers() []errorMarker {
-	errLineRe := regexp.MustCompile(`(?m)^(\d+):(\d+)\((\d+)\): (.+)$`)
+	errLineRe := regexp.MustCompile(`(?m)^(\d+):(\d+)(?:\((\d+)\))?: (.+)$`)
 
 	var markers []errorMarker
 	matches := errLineRe.FindAllStringSubmatch(err.log, -1)
